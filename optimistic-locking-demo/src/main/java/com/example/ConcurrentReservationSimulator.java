@@ -13,8 +13,76 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
-public class ConcurrentReservationSimulator {
 
+public class ConcurrentReservationSimulator {
+    // Ajouter cette méthode à la classe ConcurrentReservationSimulator
+    private static void simulateConcurrentReservationConflictWithRetry() throws InterruptedException {
+        // Création du handler avec 3 tentatives maximum
+        OptimisticLockingRetryHandler retryHandler = new OptimisticLockingRetryHandler(reservationService, 3);
+
+        // Création de deux threads qui vont modifier la même réservation
+        CountDownLatch latch = new CountDownLatch(1);
+
+        Thread thread1 = new Thread(() -> {
+            try {
+                // Attendre que les deux threads soient prêts
+                latch.await();
+
+                // Premier thread : modification du motif avec retry
+                retryHandler.executeWithRetry(1L, r -> {
+                    System.out.println("Thread 1 : Modification du motif");
+                    r.setMotif("Réunion d'équipe modifiée par Thread 1");
+
+                    // Simuler un traitement long
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                });
+            } catch (Exception e) {
+                System.out.println("Thread 1 : Exception finale : " + e.getMessage());
+            }
+        });
+
+        Thread thread2 = new Thread(() -> {
+            try {
+                // Attendre que les deux threads soient prêts
+                latch.await();
+
+                // Deuxième thread : modification des dates avec retry
+                retryHandler.executeWithRetry(1L, r -> {
+                    System.out.println("Thread 2 : Modification des dates");
+                    r.setDateDebut(r.getDateDebut().plusHours(1));
+                    r.setDateFin(r.getDateFin().plusHours(1));
+                });
+            } catch (Exception e) {
+                System.out.println("Thread 2 : Exception finale : " + e.getMessage());
+            }
+        });
+
+        // Démarrage des threads
+        thread1.start();
+        thread2.start();
+
+        // Libération du latch pour que les deux threads commencent en même temps
+        latch.countDown();
+
+        // Attendre que les deux threads terminent
+        thread1.join();
+        thread2.join();
+
+        // Vérification de l'état final de la réservation
+        Optional<Reservation> finalReservationOpt = reservationService.findById(1L);
+        finalReservationOpt.ifPresent(r -> {
+            System.out.println("\nÉtat final de la réservation avec retry :");
+            System.out.println("ID : " + r.getId());
+            System.out.println("Motif : " + r.getMotif());
+            System.out.println("Date début : " + r.getDateDebut());
+            System.out.println("Date fin : " + r.getDateFin());
+            System.out.println("Version : " + r.getVersion());
+        });
+    }
     private static final EntityManagerFactory emf =
             Persistence.createEntityManagerFactory("optimistic-locking-demo");
     private static final ReservationService reservationService = new ReservationServiceImpl(emf);
@@ -23,8 +91,16 @@ public class ConcurrentReservationSimulator {
         // Initialisation des données
         initData();
 
-        // Simulation d'un conflit de réservation concurrent
+        // Simulation d'un conflit de réservation concurrent sans retry
+        System.out.println("\n=== Simulation d'un conflit sans retry ===");
         simulateConcurrentReservationConflict();
+
+        // Réinitialisation des données
+        initData();
+
+        // Simulation d'un conflit de réservation concurrent avec retry
+        System.out.println("\n=== Simulation d'un conflit avec retry ===");
+        simulateConcurrentReservationConflictWithRetry();
 
         // Fermeture de l'EntityManagerFactory
         emf.close();
