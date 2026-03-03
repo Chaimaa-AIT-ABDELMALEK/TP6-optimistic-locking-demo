@@ -15,9 +15,8 @@ import java.util.concurrent.CountDownLatch;
 
 
 public class ConcurrentReservationSimulator {
-    // Ajouter cette méthode à la classe ConcurrentReservationSimulator
     private static void simulateConcurrentReservationConflictWithRetry() throws InterruptedException {
-        // Création du handler avec 3 tentatives maximum
+
         OptimisticLockingRetryHandler retryHandler = new OptimisticLockingRetryHandler(reservationService, 3);
 
         // Création de deux threads qui vont modifier la même réservation
