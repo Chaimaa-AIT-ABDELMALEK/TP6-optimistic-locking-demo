@@ -1,3 +1,7 @@
 # TP6-optimistic-locking-demo2
 Execution video :
-https://drive.google.com/file/d/1ySN1-ThvZD_2WNtTyWOS6CCRG4-KNX_B/view?usp=sharing
+
+
+
+https://github.com/user-attachments/assets/2cc13132-4611-4c0b-b637-37d308af7d76
+
